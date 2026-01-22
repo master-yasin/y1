@@ -4,12 +4,12 @@ import google.generativeai as genai
 # 1. Page Configuration
 st.set_page_config(page_title="y1", layout="centered")
 
-# Custom CSS for RTL support for user messages
+# Custom CSS for RTL support
 st.markdown("""
     <style>
     .stMarkdown { text-align: right; }
     </style>
-    """, unsafe_allow_index=True)
+    """, unsafe_allow_html=True)
 
 st.title("y1")
 
@@ -17,7 +17,7 @@ st.title("y1")
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Configuration Error: GOOGLE_API_KEY not found.")
+    st.error("Configuration Error: GOOGLE_API_KEY not found in Secrets.")
     st.stop()
 
 # 3. Model Initialization
@@ -47,4 +47,4 @@ if prompt := st.chat_input("Enter your message..."):
             st.markdown(output)
             st.session_state.messages.append({"role": "assistant", "content": output})
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Error: 
