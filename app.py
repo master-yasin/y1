@@ -20,8 +20,8 @@ else:
     st.error("Configuration Error: GOOGLE_API_KEY not found.")
     st.stop()
 
-# 3. Model Initialization
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 3. Model Initialization (Updated to the stable version)
+model = genai.GenerativeModel('gemini-pro')
 
 # 4. Session State for Chat History
 if "messages" not in st.session_state:
