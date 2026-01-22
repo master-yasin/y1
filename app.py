@@ -20,11 +20,12 @@ else:
     st.error("Configuration Error: GOOGLE_API_KEY not found.")
     st.stop()
 
-# 3. Model Initialization (Using the most compatible identifier)
+# 3. Model Initialization
+# Using 'gemini-1.5-pro' as it's the most widely supported in 2026 for generic calls
 try:
-    model = genai.GenerativeModel('models/gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-1.5-pro')
 except Exception:
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-pro')
 
 # 4. Session State for Chat History
 if "messages" not in st.session_state:
@@ -45,10 +46,9 @@ if prompt := st.chat_input("Enter your message..."):
     # Generate Response
     with st.chat_message("assistant"):
         try:
-            # Added generation config for better stability
             response = model.generate_content(prompt)
             output = response.text
             st.markdown(output)
             st.session_state.messages.append({"role": "assistant", "content": output})
         except Exception as e:
-            st.error(f"Error details: {str(e)}")
+            st.error(f"Error: {str(e)}")
