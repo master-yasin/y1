@@ -20,12 +20,19 @@ else:
     st.error("Configuration Error: GOOGLE_API_KEY not found.")
     st.stop()
 
-# 3. Model Initialization
-# Using 'gemini-1.5-pro' as it's the most widely supported in 2026 for generic calls
-try:
-    model = genai.GenerativeModel('gemini-1.5-pro')
-except Exception:
-    model = genai.GenerativeModel('gemini-pro')
+# 3. Dynamic Model Selection
+# This part will find the first available model that supports generating content
+@st.cache_resource
+def get_available_model():
+    for m in genai.list_models():
+        if 'generateContent' in m.supported_generation_methods:
+            # We prefer Gemini 1.5 Flash or Pro if available
+            if '1.5' in m.name:
+                return m.name
+    return 'gemini-pro' # Fallback
+
+model_name = get_available_model()
+model = genai.GenerativeModel(model_name)
 
 # 4. Session State for Chat History
 if "messages" not in st.session_state:
@@ -38,12 +45,10 @@ for message in st.session_state.messages:
 
 # 5. Chat Logic
 if prompt := st.chat_input("Enter your message..."):
-    # Append User Message
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Generate Response
     with st.chat_message("assistant"):
         try:
             response = model.generate_content(prompt)
