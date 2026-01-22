@@ -17,7 +17,7 @@ st.title("y1")
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Configuration Error: GOOGLE_API_KEY not found in Secrets.")
+    st.error("Configuration Error: GOOGLE_API_KEY not found.")
     st.stop()
 
 # 3. Model Initialization
@@ -47,4 +47,4 @@ if prompt := st.chat_input("Enter your message..."):
             st.markdown(output)
             st.session_state.messages.append({"role": "assistant", "content": output})
         except Exception as e:
-            st.error(f"Error: 
+            st.error(f"Error: {str(e)}")
