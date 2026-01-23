@@ -13,19 +13,19 @@ else:
     st.error("API Key Missing")
     st.stop()
 
-# 3. Secure Model Initialization
-# We use 'gemini-1.5-flash-latest' to ensure we point to the current active version
-model = genai.GenerativeModel('gemini-1.5-flash-latest')
+# 3. Secure Model for Iraq Region
+# We use 'gemini-1.0-pro' as it has the widest global availability
+model = genai.GenerativeModel('gemini-1.0-pro')
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. History Display
+# 4. Display History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. Chat Logic with Session Memory
+# 5. Chat Engine with Memory
 if prompt := st.chat_input("..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -33,7 +33,7 @@ if prompt := st.chat_input("..."):
 
     with st.chat_message("assistant"):
         try:
-            # Transform history correctly for Gemini (user/model roles)
+            # Transform history for Gemini compatibility
             history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
                        for m in st.session_state.messages[:-1]]
             
