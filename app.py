@@ -1,67 +1,73 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Page & RTL Setup
+# 1. Page Configuration & RTL UI
 st.set_page_config(page_title="y1", layout="centered")
-st.markdown("""<style>.stMarkdown {text-align: right;} div[data-testid="stVerticalBlock"] {direction: rtl;}</style>""", unsafe_allow_html=True)
+
+# CSS to force Arabic-friendly layout (Right-to-Left)
+st.markdown("""
+    <style>
+    .stMarkdown { text-align: right; }
+    div[data-testid="stVerticalBlock"] { direction: rtl; }
+    div[data-testid="stChatInput"] { direction: ltr; } /* Input remains LTR for better typing experience */
+    </style>
+    """, unsafe_allow_html=True)
+
 st.title("y1")
 
-# 2. API Key
+# 2. Secure API Configuration
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Missing API Key")
+    st.error("Missing GOOGLE_API_KEY in secrets.")
     st.stop()
 
-# 3. Dynamic Model Discovery (Specifically for regional restrictions)
+# 3. Dynamic Model Discovery (Optimized for Iraq/Regional Access)
 @st.cache_resource
-def find_best_model():
-    # Priority list of models
-    priorities = ['gemini-1.5-flash', 'gemini-1.5-pro', 'gemini-1.0-pro']
-    available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+def get_optimized_model():
+    priority_models = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-1.0-pro']
+    available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
     
-    # Check if any priority model is available in your region
-    for p in priorities:
-        full_name = f"models/{p}"
-        if full_name in available_models:
-            return full_name
-    
-    # Fallback to the first available non-experimental model
-    return available_models[0] if available_models else None
+    for model_path in priority_models:
+        if model_path in available:
+            return genai.GenerativeModel(model_path)
+    return genai.GenerativeModel(available[0]) if available else None
 
-selected_model = find_best_model()
+chat_model = get_optimized_model()
 
-if not selected_model:
-    st.error("No compatible models found in your region.")
-    st.stop()
+# 4. Session State Management (Temporary Memory)
+# This clears automatically when the browser tab is closed or refreshed
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
 
-model = genai.GenerativeModel(selected_model)
+# Display current session messages
+for msg in st.session_state.chat_history:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
 
-# 4. Session Memory
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for message in st.session_state.messages:
-    with st.chat_message(message["role"]):
-        st.markdown(message["content"])
-
-# 5. Chat Engine
-if prompt := st.chat_input("..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
+# 5. Chat Interaction Logic
+if prompt := st.chat_input("Ask y1..."):
+    # Add user message to session
+    st.session_state.chat_history.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # Generate AI Response using session memory
     with st.chat_message("assistant"):
         try:
-            # Transform history for Gemini
-            history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
-                       for m in st.session_state.messages[:-1]]
+            # Format history for the API (Converting roles for Gemini compatibility)
+            api_memory = [
+                {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
+                for m in st.session_state.chat_history[:-1]
+            ]
             
-            chat = model.start_chat(history=history)
-            response = chat.send_message(prompt)
+            chat_session = chat_model.start_chat(history=api_memory)
+            response = chat_session.send_message(prompt)
             
-            st.markdown(response.text)
-            st.session_state.messages.append({"role": "assistant", "content": response.text})
+            # Save and display response
+            ai_response = response.text
+            st.markdown(ai_response)
+            st.session_state.chat_history.append({"role": "assistant", "content": ai_response})
             
         except Exception as e:
             st.error(f"Error: {str(e)}")
