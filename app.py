@@ -8,7 +8,6 @@ st.set_page_config(page_title="y1", layout="centered")
 st.markdown("""
     <style>
     .stMarkdown { text-align: right; }
-    div[data-testid="stVerticalBlock"] { direction: rtl; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -22,13 +21,15 @@ else:
     st.stop()
 
 # 3. Dynamic Model Selection
+# This part will find the first available model that supports generating content
 @st.cache_resource
 def get_available_model():
     for m in genai.list_models():
         if 'generateContent' in m.supported_generation_methods:
+            # We prefer Gemini 1.5 Flash or Pro if available
             if '1.5' in m.name:
                 return m.name
-    return 'gemini-pro'
+    return 'gemini-pro' # Fallback
 
 model_name = get_available_model()
 model = genai.GenerativeModel(model_name)
@@ -44,30 +45,15 @@ for message in st.session_state.messages:
 
 # 5. Chat Logic
 if prompt := st.chat_input("Enter your message..."):
-    # Append User Message to UI State
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
         try:
-            # Constructing correct history format for Gemini's ChatSession
-            # Gemini expects 'user' and 'model' roles only
-            history_for_api = []
-            for m in st.session_state.messages[:-1]:
-                role = "user" if m["role"] == "user" else "model"
-                history_for_api.append({"role": role, "parts": [m["content"]]})
-            
-            # Initialize Chat Session with memory
-            chat_session = model.start_chat(history=history_for_api)
-            
-            # Send message and get response
-            response = chat_session.send_message(prompt)
+            response = model.generate_content(prompt)
             output = response.text
-            
-            # Display response and save to state
             st.markdown(output)
             st.session_state.messages.append({"role": "assistant", "content": output})
-            
         except Exception as e:
             st.error(f"Error: {str(e)}")
