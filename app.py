@@ -1,7 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. UI Setup (RTL Support)
+# 1. UI Setup
 st.set_page_config(page_title="y1", layout="centered")
 st.markdown("""<style>.stMarkdown {text-align: right;} div[data-testid="stVerticalBlock"] {direction: rtl;}</style>""", unsafe_allow_html=True)
 st.title("y1")
@@ -13,19 +13,19 @@ else:
     st.error("API Key Missing")
     st.stop()
 
-# 3. Secure Model Selection
-# Using 'gemini-pro' as it's the most compatible model across all API versions
-model = genai.GenerativeModel('gemini-pro')
+# 3. Secure Model Initialization
+# We use 'gemini-1.5-flash-latest' to ensure we point to the current active version
+model = genai.GenerativeModel('gemini-1.5-flash-latest')
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. Display History
+# 4. History Display
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. Chat Engine with Session Memory
+# 5. Chat Logic with Session Memory
 if prompt := st.chat_input("..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -33,11 +33,10 @@ if prompt := st.chat_input("..."):
 
     with st.chat_message("assistant"):
         try:
-            # Preparing history: Converting 'assistant' to 'model' for Gemini compatibility
+            # Transform history correctly for Gemini (user/model roles)
             history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
                        for m in st.session_state.messages[:-1]]
             
-            # Start session and get response
             chat = model.start_chat(history=history)
             response = chat.send_message(prompt)
             
