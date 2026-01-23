@@ -1,30 +1,33 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. UI & RTL Setup
+# 1. UI Setup
 st.set_page_config(page_title="y1", layout="centered")
 st.markdown("""<style>.stMarkdown {text-align: right;} div[data-testid="stVerticalBlock"] {direction: rtl;}</style>""", unsafe_allow_html=True)
 st.title("y1")
 
-# 2. Authentication
+# 2. Auth
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
     st.error("API Key Missing")
     st.stop()
 
-# 3. Model & State Initialization
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 3. Model Initialization (Explicit Path to avoid 404)
+try:
+    model = genai.GenerativeModel(model_name='models/gemini-1.5-flash')
+except:
+    model = genai.GenerativeModel(model_name='gemini-pro')
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# 4. Display History
+# 4. History Display
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. Chat Engine (With Memory)
+# 5. Engine
 if prompt := st.chat_input("..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
@@ -32,16 +35,14 @@ if prompt := st.chat_input("..."):
 
     with st.chat_message("assistant"):
         try:
-            # Clean History Transformation for API
             history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
                        for m in st.session_state.messages[:-1]]
             
             chat = model.start_chat(history=history)
             response = chat.send_message(prompt)
-            output = response.text
             
-            st.markdown(output)
-            st.session_state.messages.append({"role": "assistant", "content": output})
+            st.markdown(response.text)
+            st.session_state.messages.append({"role": "assistant", "content": response.text})
             
         except Exception as e:
             st.error(f"Error: {str(e)}")
