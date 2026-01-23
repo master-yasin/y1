@@ -1,59 +1,47 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Page Configuration
+# 1. UI & RTL Setup
 st.set_page_config(page_title="y1", layout="centered")
-
-# Custom CSS for RTL support
-st.markdown("""
-    <style>
-    .stMarkdown { text-align: right; }
-    </style>
-    """, unsafe_allow_html=True)
-
+st.markdown("""<style>.stMarkdown {text-align: right;} div[data-testid="stVerticalBlock"] {direction: rtl;}</style>""", unsafe_allow_html=True)
 st.title("y1")
 
-# 2. API Key Configuration
+# 2. Authentication
 if "GOOGLE_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 else:
-    st.error("Configuration Error: GOOGLE_API_KEY not found.")
+    st.error("API Key Missing")
     st.stop()
 
-# 3. Dynamic Model Selection
-# This part will find the first available model that supports generating content
-@st.cache_resource
-def get_available_model():
-    for m in genai.list_models():
-        if 'generateContent' in m.supported_generation_methods:
-            # We prefer Gemini 1.5 Flash or Pro if available
-            if '1.5' in m.name:
-                return m.name
-    return 'gemini-pro' # Fallback
+# 3. Model & State Initialization
+model = genai.GenerativeModel('gemini-1.5-flash')
 
-model_name = get_available_model()
-model = genai.GenerativeModel(model_name)
-
-# 4. Session State for Chat History
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# Display Message History
+# 4. Display History
 for message in st.session_state.messages:
     with st.chat_message(message["role"]):
         st.markdown(message["content"])
 
-# 5. Chat Logic
-if prompt := st.chat_input("Enter your message..."):
+# 5. Chat Engine (With Memory)
+if prompt := st.chat_input("..."):
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
         try:
-            response = model.generate_content(prompt)
+            # Clean History Transformation for API
+            history = [{"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
+                       for m in st.session_state.messages[:-1]]
+            
+            chat = model.start_chat(history=history)
+            response = chat.send_message(prompt)
             output = response.text
+            
             st.markdown(output)
             st.session_state.messages.append({"role": "assistant", "content": output})
+            
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            st.error(f"Error: 
