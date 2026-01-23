@@ -1,5 +1,2 @@
 streamlit
 google-generativeai
-streamlit-mic-recorder
-gTTS
-SpeechRecognition
