@@ -21,9 +21,12 @@ else:
     st.error("API Key Missing")
     st.stop()
 
-# 3. Fixed Stable Model (Forcing 1.5 Flash to get high quota)
-# We avoid the "discovery" function to prevent it from picking Gemini 2.5 (20 msg limit)
-model = genai.GenerativeModel('gemini-1.5-flash')
+# 3. Forced Stable Path (The fix for Iraq 404/429 issues)
+# We use the explicit versioned string to bypass the 404 error
+try:
+    model = genai.GenerativeModel('models/gemini-1.5-flash-001')
+except:
+    model = genai.GenerativeModel('gemini-pro')
 
 # 4. Session State Memory
 if "messages" not in st.session_state:
@@ -51,5 +54,4 @@ if prompt := st.chat_input("Enter message"):
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            # If 1.5 Flash fails, try the Pro version as backup
-            st.error(f"Quota reached or Error: {str(e)}")
+            st.error(f"Status: {str(e)}")
