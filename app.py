@@ -4,7 +4,6 @@ import google.generativeai as genai
 # 1. Page Configuration
 st.set_page_config(page_title="y1", layout="centered")
 
-# RTL Support for Arabic display
 st.markdown("""
     <style>
     .stMarkdown { text-align: right; }
@@ -22,20 +21,9 @@ else:
     st.error("API Key Missing")
     st.stop()
 
-# 3. Model Selection Logic
-@st.cache_resource
-def get_model():
-    priorities = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-1.0-pro']
-    try:
-        available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        for p in priorities:
-            if p in available:
-                return genai.GenerativeModel(p)
-        return genai.GenerativeModel(available[0])
-    except:
-        return genai.GenerativeModel('gemini-1.5-flash')
-
-model = get_model()
+# 3. Fixed Stable Model (Forcing 1.5 Flash to get high quota)
+# We avoid the "discovery" function to prevent it from picking Gemini 2.5 (20 msg limit)
+model = genai.GenerativeModel('gemini-1.5-flash')
 
 # 4. Session State Memory
 if "messages" not in st.session_state:
@@ -53,7 +41,6 @@ if prompt := st.chat_input("Enter message"):
 
     with st.chat_message("assistant"):
         try:
-            # Building history for the API
             history = [
                 {"role": "user" if m["role"] == "user" else "model", "parts": [m["content"]]} 
                 for m in st.session_state.messages[:-1]
@@ -64,4 +51,5 @@ if prompt := st.chat_input("Enter message"):
             st.markdown(response.text)
             st.session_state.messages.append({"role": "assistant", "content": response.text})
         except Exception as e:
-            st.error(f"Error: {str(e)}")
+            # If 1.5 Flash fails, try the Pro version as backup
+            st.error(f"Quota reached or Error: {str(e)}")
